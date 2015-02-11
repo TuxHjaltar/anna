@@ -15,6 +15,7 @@ def load_config(filename):
 
 class Bot(irc.bot.SingleServerIRCBot):
     def __init__(self, config):
+        self.config_filename = config
         self.config = load_config(config)
         super().__init__(
                 [(self.config['server'].split(':')[0], int(self.config['server'].split(':')[1]))],
@@ -69,6 +70,41 @@ class Bot(irc.bot.SingleServerIRCBot):
         print(event.arguments)
         print("user: ", self.channels[event.arguments[0]].users())
         self.update_user_modes(event.arguments[0], event.arguments[1], event.arguments[4], event.arguments[2])
+
+
+    #def on_privmsg(self, conn, event):
+    #    print(vars(event))
+    #    parse_command
+
+    def on_pubmsg(self, conn, event):
+        print(vars(event))
+        msg = event.arguments[0].strip()
+
+        if msg[:len(self.config['nick'])+2] == "%s: "%self.config['nick']:
+            print(event.source, " commanded '%s'"%msg[len(self.config['nick'])+2:])
+            self.parse_command(event.source, event.target, msg[len(self.config['nick'])+2:].strip())
+
+
+    def parse_command(self, issuer, channel, command):
+        if issuer.split("!")[1] in self.config['admins']:
+            if command == "reload":
+                try:
+                    self.reload()
+                    self.connection.privmsg(channel, "%s: yes, sir!"%issuer.split("!")[0])
+                except ValueError:
+                    self.connection.privmsg(channel, "%s: error in configuration"%issuer.split("!")[0])
+            else:
+                self.connection.privmsg(channel, "%s: unknown command"%issuer.split("!")[0])
+        else:
+            self.connection.privmsg(channel, "%s: permission denied"%issuer.split("!")[0])
+            
+
+    def reload(self):
+        self.config = load_config(self.config_filename)
+        for channel_name in self.channels.keys():
+            if self.channels[channel_name].is_oper(self.config['nick']):
+                self.connection.who(channel_name)
+
 
 
 def main():
