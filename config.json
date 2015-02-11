@@ -1,0 +1,14 @@
+{
+	"server": "178.62.201.67:6667",
+	"nick": "anna",
+	"user": "anna",
+	"realname": "anna",
+	"channels":
+	{
+		"#epsilon":
+		{
+			"ops": ["deox@109.74.2.35", "h0wser@localhost"],
+			"voice": ["cognizance@178.62.201.67"]
+		}
+	}
+}
