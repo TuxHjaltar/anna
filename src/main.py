@@ -2,6 +2,8 @@
 
 import irc.bot
 import json
+import wolframalpha
+import re
 
 # Local imports
 
@@ -21,6 +23,10 @@ class Bot(irc.bot.SingleServerIRCBot):
                 [(self.config['server'].split(':')[0], int(self.config['server'].split(':')[1]))],
                     self.config['nick'], self.config['realname'])
         self.connection.buffer_class = irc.buffer.LenientDecodingLineBuffer
+
+        self.wa_client = None
+        if "wa_appid" in self.config:
+            self.wa_client = wolframalpha.Client(self.config["wa_appid"])
 
 
     def update_user_modes(self, channel_name, nick, user, host):
@@ -80,32 +86,77 @@ class Bot(irc.bot.SingleServerIRCBot):
     def on_pubmsg(self, conn, event):
         print(vars(event))
         msg = event.arguments[0].strip()
+        match = re.match('%s(,|:)\s+(.+)'%self.config['nick'], msg)
+        command = None
+        if match:
+            command = match.groups()[1]
+        else:
+            return
 
-        if msg[:len(self.config['nick'])+2] == "%s: "%self.config['nick']:
-            print(event.source, " commanded '%s'"%msg[len(self.config['nick'])+2:])
-            self.parse_command(event.source, event.target, msg[len(self.config['nick'])+2:].strip())
+        print(event.source, " commanded '%s'"%command)
+        self.parse_command(event.source, event.target, command)
 
 
     def parse_command(self, issuer, channel, command):
-        if issuer.split("!")[1] in self.config['admins']:
+        issuer_nick = issuer.split("!")[0]
+        issuer_ident = issuer.split("!")[1]
+        if issuer_ident in self.config['admins']:
             if command == "reload":
                 try:
                     self.reload()
-                    self.connection.privmsg(channel, "%s: yes, sir!"%issuer.split("!")[0])
+                    self.connection.privmsg(channel, "%s: yes, sir!"%issuer_nick)
                 except ValueError:
-                    self.connection.privmsg(channel, "%s: error in configuration"%issuer.split("!")[0])
-            else:
-                self.connection.privmsg(channel, "%s: unknown command"%issuer.split("!")[0])
+                    self.connection.privmsg(channel, "%s: error in configuration"%issuer_nick)
+                return
+
+        if self.attempt_wa_query(channel, issuer_nick, command):
+            return
         else:
-            self.connection.privmsg(channel, "%s: permission denied"%issuer.split("!")[0])
+            self.connection.privmsg(channel, "%s: unknown command"%issuer_nick)
             
 
     def reload(self):
         self.config = load_config(self.config_filename)
+
+        if "wa_appid" in self.config:
+            self.wa_client = wolframalpha.Client(self.config["wa_appid"])
+
         for channel_name in self.channels.keys():
             if self.channels[channel_name].is_oper(self.config['nick']):
                 self.connection.who(channel_name)
 
+    def attempt_wa_query(self, channel, issuer, command):
+        match = re.match("^what is (.+?)\\?+$", command)
+        if match:
+            self.wa_query(channel, issuer, match.groups()[0])
+            return True
+        else:
+            return False
+
+
+    def wa_query(self, channel, issuer, query):
+        if self.wa_client:
+            result = None
+            try:
+                result = self.wa_client.query(query)
+            except:
+                # try again
+                try:
+                    result = self.wa_client.query(query)
+                except:
+                    self.connection.privmsg(channel, "%s: knowledge unavailable at this time"%issuer)
+                    return
+
+            if result != None:
+                for pod in result.pods:
+                    if pod.title == "Result" or pod.title == "Current result":
+                        self.connection.privmsg(channel, "%s: %s"%(issuer, pod.text.split('\n')[0]))
+                        #replace('\n', ' ')))
+                        return
+
+                self.connection.privmsg(channel, "%s: I don't know"%issuer)
+        else:
+            self.connection.privmsg(channel, "%s: knowledge unavailable"%issuer)
 
 
 def main():
