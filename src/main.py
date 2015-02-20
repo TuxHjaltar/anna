@@ -20,6 +20,7 @@ class Bot(irc.bot.SingleServerIRCBot):
         super().__init__(
                 [(self.config['server'].split(':')[0], int(self.config['server'].split(':')[1]))],
                     self.config['nick'], self.config['realname'])
+        self.connection.buffer_class = irc.buffer.LenientDecodingLineBuffer
 
 
     def update_user_modes(self, channel_name, nick, user, host):
@@ -111,6 +112,7 @@ def main():
     #bot.on_welcome = on_connect
     #bot.on_join = on_join
     anna = Bot('config.json')
+    
     anna.start()
 
 
