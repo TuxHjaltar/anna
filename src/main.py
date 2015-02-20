@@ -75,6 +75,8 @@ class Bot(irc.bot.SingleServerIRCBot):
 
     def on_whoreply(self, conn, event):
         print(event.arguments)
+        if event.arguments[0] not in self.channels:
+            return
         print("user: ", self.channels[event.arguments[0]].users())
         self.update_user_modes(event.arguments[0], event.arguments[1], event.arguments[4], event.arguments[2])
 
