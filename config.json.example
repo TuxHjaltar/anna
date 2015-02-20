@@ -1,0 +1,18 @@
+{
+	"server": "127.0.0.1:6667",
+	"nick": "anna",
+	"user": "anna",
+	"realname": "anna",
+	"admins":
+	[
+		"root@localhost"
+	],
+	"channels":
+	{
+		"#channel":
+		{
+			"ops": ["root@localhost"],
+			"voice": ["notroot@remotehost"]
+		}
+	}
+}
