@@ -4,6 +4,8 @@ import irc.bot
 import json
 import wolframalpha
 import re
+from threading import Timer
+import string
 
 # Local imports
 
@@ -113,6 +115,11 @@ class Bot(irc.bot.SingleServerIRCBot):
 
         if self.attempt_wa_query(channel, issuer_nick, command):
             return
+
+        # args[0] is command, the rest is arguments
+        args = command.split()
+        if args[0] == "remindme":
+            self.set_reminder(channel, issuer_nick, args[1], " ".join(args[2:]))
         else:
             self.connection.privmsg(channel, "%s: unknown command"%issuer_nick)
             
@@ -159,6 +166,18 @@ class Bot(irc.bot.SingleServerIRCBot):
                 self.connection.privmsg(channel, "%s: I don't know"%issuer)
         else:
             self.connection.privmsg(channel, "%s: knowledge unavailable"%issuer)
+
+    def set_reminder(self, channel, issuer_nick, time, text):
+        # time is amount of hours until remind should fire
+        # TODO: Better time parsing (yes i'm lazy)
+        try: 
+            timer = Timer(float(time) * 3600, self.remind, [channel, issuer_nick, text])
+            timer.start()
+        except ValueError:
+            self.connection.privmsg(channel, "%s: failed to set reminder"%issuer_nick)
+
+    def remind(self, channel, issuer_nick, text):
+        self.connection.privmsg(channel, "%s: Reminder: %s"%(issuer_nick, text))
 
 
 def main():
