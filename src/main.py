@@ -173,6 +173,7 @@ class Bot(irc.bot.SingleServerIRCBot):
         try: 
             timer = Timer(float(time) * 3600, self.remind, [channel, issuer_nick, text])
             timer.start()
+            self.connection.privmsg(channel, "%s: reminder set!"%issuer_nick)
         except ValueError:
             self.connection.privmsg(channel, "%s: failed to set reminder"%issuer_nick)
 
