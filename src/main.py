@@ -6,6 +6,7 @@ import wolframalpha
 import re
 from threading import Timer
 import string
+import subprocess
 
 # Local imports
 
@@ -48,6 +49,9 @@ class Bot(irc.bot.SingleServerIRCBot):
         print("connected!")
         for channel in self.config['channels'].keys():
             connection.join(channel)
+        
+        if 'blocket' in self.config:
+            self.start_blocket_search()
 
 
     def on_join(self, connection, event):
@@ -179,6 +183,25 @@ class Bot(irc.bot.SingleServerIRCBot):
 
     def remind(self, channel, issuer_nick, text):
         self.connection.privmsg(channel, "%s: Reminder: %s"%(issuer_nick, text))
+
+    def start_blocket_search(self):
+        self.search_blocket()
+
+    def search_blocket(self):
+        try: 
+            timer = Timer(self.config['blocket']['interval'], self.search_blocket)
+            timer.start()
+        except ValueError:
+            pass
+
+        print("searching blocket...")
+        new_ads = subprocess.check_output("./lgh-search.sh").decode('utf-8').split('\n')[:-1]
+        for ad in new_ads:
+            for nick in self.config['blocket']['notify-users']:
+                self.connection.privmsg(self.config['blocket']['notify-channel'],
+                        "%s: New Blocket ad: %s"%(nick, ad))
+        print("%d new results"%len(new_ads))
+        
 
 
 def main():

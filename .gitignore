@@ -1,4 +1,6 @@
 *.swp
 *.pyc
 config.json
+last-ads
+tmp-ads
 
