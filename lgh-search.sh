@@ -11,7 +11,7 @@ wget -qO- "$SEARCH_URL"\
 	> $TMP_FILE
 
 if [ -f last-ads ]; then
-	(cat last-ads && cat tmp-ads) | sort | uniq -u
+	(cat last-ads && cat last-ads && cat tmp-ads) | sort | uniq -u # lol
 fi
 
 mv $TMP_FILE $LAST_FILE
